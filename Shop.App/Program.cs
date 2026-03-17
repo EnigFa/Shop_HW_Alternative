@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Shop.App.Configurators;
 using Shop.App.Data;
+using Shop.App.Repositories;
 using Shop.App.Services;
 using Shop.Domain.Entities;
 using Shop.Domain.Enums;
@@ -19,6 +20,9 @@ namespace Shop.App
             });
 
             services.AddScoped<OrderService>();
+            services.AddScoped<ProductRepository>();
+            services.AddScoped<ProductService>();
+            services.AddScoped<ShopManager>();
 
             var provider = services.BuildServiceProvider();
 
@@ -29,13 +33,8 @@ namespace Shop.App
 
             if (context.Database.CanConnect())
             {
-                var orderService = scope.ServiceProvider.GetRequiredService<OrderService>();
-
-                Console.Write("Введіть Id користувача: ");
-                if (int.TryParse(Console.ReadLine(), out int userId))
-                {
-                    orderService.CreateOrder(userId);
-                }
+                var shopManager = scope.ServiceProvider.GetRequiredService<ShopManager>();
+                shopManager.Run();
             }
             else
             {
