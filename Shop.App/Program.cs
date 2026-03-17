@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Shop.App.Configurators;
 using Shop.App.Data;
 using Shop.App.Repositories;
+using Shop.App.Seeders;
 using Shop.App.Services;
 using Shop.Domain.Entities;
 using Shop.Domain.Enums;
@@ -33,8 +35,22 @@ namespace Shop.App
 
             if (context.Database.CanConnect())
             {
-                var shopManager = scope.ServiceProvider.GetRequiredService<ShopManager>();
-                shopManager.Run();
+                var connectionString = context.Database.GetConnectionString();
+
+                
+                var seeder = new ProductSeeder(connectionString!);
+                seeder.Seed(100000);
+
+                var benchmarkService = new ProductBenchmarkService(connectionString!);
+
+                
+                benchmarkService.SearchWithoutIndex("Product_50000");
+
+                
+                benchmarkService.CreateIndex();
+
+                
+                benchmarkService.SearchWithIndex("Product_50000");
             }
             else
             {
