@@ -111,12 +111,43 @@ public class OrderService
             return;
         }
 
-        order.TotalAmount = orderItems.Sum(oi => oi.Price * oi.Quantity);
-        order.OrderItems = orderItems;
+        
+        using var transaction = _context.Database.BeginTransaction();
+        try
+        {
+            
+            foreach (var item in orderItems)
+            {
+                var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product == null || product.StockQuantity < item.Quantity)
+                {
+                    Console.WriteLine($"Недостатньо товару '{product?.Name ?? "невідомий"}' на складі. Замовлення скасовано.");
+                    transaction.Rollback();
+                    return;
+                }
+            }
 
-        _context.Orders.Add(order);
-        _context.SaveChanges();
+        
+            foreach (var item in orderItems)
+            {
+                var product = _context.Products.First(p => p.Id == item.ProductId);
+                product.StockQuantity -= item.Quantity;
+            }
 
-        Console.WriteLine($"\nЗамовлення #{order.Id} успішно збережено! Сума: {order.TotalAmount} грн");
+            order.TotalAmount = orderItems.Sum(oi => oi.Price * oi.Quantity);
+            order.OrderItems = orderItems;
+
+            _context.Orders.Add(order);
+            _context.SaveChanges();
+
+            transaction.Commit();
+
+            Console.WriteLine($"\nЗамовлення #{order.Id} успішно збережено! Сума: {order.TotalAmount} грн");
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            Console.WriteLine($"Помилка при збереженні замовлення: {ex.Message}");
+        }
     }
 }
